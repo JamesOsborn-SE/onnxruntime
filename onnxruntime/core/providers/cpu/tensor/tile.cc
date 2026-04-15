@@ -169,6 +169,50 @@ Status Tile::Compute(OpKernelContext* ctx) const {
     output_dims[axis] = SafeInt<int64_t>(output_dims[axis]) * repeats[axis];
   }
 
+  // Per-axis SafeInt multiplication above detects integer overflow when computing
+  // any single output dimension. In addition, bound the total tiled byte count so
+  // that a combination of large (but individually in-range) dimensions cannot
+  // request an allocation that exceeds a reasonable upper limit. This also applies
+  // to std::string tensors, whose backing storage is sizeof(std::string) per element.
+  //
+  // Use a division-based bound check rather than SafeInt multiplication so that
+  // over-limit inputs always produce the INVALID_ARGUMENT status below instead of
+  // a SafeInt overflow exception.
+  {
+    constexpr int64_t kMaxTileOutputBytes = int64_t{4} * 1024 * 1024 * 1024;  // 4 GiB
+    const int64_t element_size = static_cast<int64_t>(input_tensor.DataType()->Size());
+    if (element_size <= 0) {
+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL,
+                             "Invalid element size for Tile input tensor type.");
+    }
+    const int64_t max_elements = kMaxTileOutputBytes / element_size;
+
+    int64_t total_elements = 1;
+    for (size_t axis = 0; axis < input_rank; ++axis) {
+      const int64_t dim = output_dims[axis];
+      if (dim == 0) {
+        total_elements = 0;
+        break;
+      }
+      if (total_elements > max_elements / dim) {
+        return ORT_MAKE_STATUS(ONNXRUNTIME, INVALID_ARGUMENT,
+                               "Tile output tensor would require more than ",
+                               kMaxTileOutputBytes,
+                               " bytes, which exceeds the supported maximum of ",
+                               kMaxTileOutputBytes, " bytes.");
+      }
+      total_elements *= dim;
+    }
+
+    const int64_t total_bytes = total_elements * element_size;
+    if (total_bytes > kMaxTileOutputBytes) {
+      return ORT_MAKE_STATUS(ONNXRUNTIME, INVALID_ARGUMENT,
+                             "Tile output tensor would require ", total_bytes,
+                             " bytes, which exceeds the supported maximum of ",
+                             kMaxTileOutputBytes, " bytes.");
+    }
+  }
+
   TensorShape output_shape(output_dims);
   auto& output_tensor = *ctx->Output(0, output_shape);
 
