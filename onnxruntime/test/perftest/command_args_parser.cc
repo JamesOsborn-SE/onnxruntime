@@ -182,6 +182,9 @@ ABSL_FLAG(bool, z, DefaultPerformanceTestConfig().run_config.set_denormal_as_zer
 ABSL_FLAG(bool, D, DefaultPerformanceTestConfig().run_config.disable_spinning, "Disables spinning entirely for thread owned by onnxruntime intra-op thread pool.");
 ABSL_FLAG(bool, Z, DefaultPerformanceTestConfig().run_config.disable_spinning_between_run, "Disallows thread from spinning during runs to reduce cpu usage.");
 ABSL_FLAG(bool, n, DefaultPerformanceTestConfig().run_config.exit_after_session_creation, "Allows user to measure session creation time to measure impact of enabling any initialization optimizations.");
+ABSL_FLAG(uint32_t, hold_ms_after_session_creation, DefaultPerformanceTestConfig().run_config.hold_ms_after_session_creation,
+          "When used with -n, keeps the process alive for the specified number of milliseconds after session creation.\n"
+          "Prints 'SESSION_READY pid=<pid>' to stdout before sleeping. Useful for multi-process memory measurements.");
 ABSL_FLAG(bool, l, DefaultPerformanceTestConfig().model_info.load_via_path, "Provides file as binary in memory by using fopen before session creation.");
 ABSL_FLAG(bool, g, DefaultPerformanceTestConfig().run_config.enable_cuda_io_binding, "[TensorRT RTX | TensorRT | CUDA] Enables tensor input and output bindings on CUDA before session run.");
 ABSL_FLAG(bool, X, DefaultPerformanceTestConfig().run_config.use_extensions, "Registers custom ops from onnxruntime-extensions.");
@@ -512,6 +515,9 @@ bool CommandLineParser::ParseArguments(PerformanceTestConfig& test_config, int a
 
   // -n
   test_config.run_config.exit_after_session_creation = absl::GetFlag(FLAGS_n);
+
+  // --hold_ms_after_session_creation
+  test_config.run_config.hold_ms_after_session_creation = absl::GetFlag(FLAGS_hold_ms_after_session_creation);
 
   // -l
   test_config.model_info.load_via_path = absl::GetFlag(FLAGS_l);

@@ -71,6 +71,7 @@ struct RunConfig {
   bool disable_spinning = false;
   bool disable_spinning_between_run = false;
   bool exit_after_session_creation = false;
+  uint32_t hold_ms_after_session_creation{0};
   std::basic_string<ORTCHAR_T> register_custom_op_path;
   bool enable_cuda_io_binding{false};
   bool use_extensions = false;
