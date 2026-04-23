@@ -32,7 +32,7 @@ jobs:
 
       execution_providers: 'openvino'
 
-      extra_build_flags: '--use_openvino CPU --enable_generic_interface --build_shared_lib'
+      extra_build_flags: '--use_openvino GPU --enable_generic_interface --build_shared_lib'
 
       # Python Path Prefix: Set the correct Python 3.12 path inside the manylinux container
       python_path_prefix: 'PATH=/opt/python/cp312-cp312/bin:$PATH'
